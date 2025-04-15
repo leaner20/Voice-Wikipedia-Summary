@@ -1,0 +1,50 @@
+import speech_recognition as sr
+import webbrowser
+import requests
+from bs4 import BeautifulSoup
+import textwrap
+from googlesearch import search
+
+recognizer = sr.Recognizer()
+
+for i in range(10):
+    try:
+        print(f"\n Please say your query {i + 1} of 10:")
+        with sr.Microphone() as source:
+            audio = recognizer.listen(source)
+
+        query = recognizer.recognize_google(audio)
+        print(f"You said: {query}")
+
+
+        search_query = f"site:en.wikipedia.org {query}"
+        webbrowser.open(f"https://www.google.com/search?q={search_query.replace(' ', '+')}")
+
+
+        wiki_url = None
+        for url in search(search_query, num_results=5):
+            if "en.wikipedia.org/wiki/" in url:
+                wiki_url = url
+                break
+
+        if not wiki_url:
+            print(" No Wikipedia result found.")
+            continue
+
+
+        response = requests.get(wiki_url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        paragraphs = soup.select("p")
+        content = "\n".join([p.get_text() for p in paragraphs[:5]])
+
+
+        filename = f"{query.title().replace(' ', '_')}.txt"
+        with open(filename, "w", encoding="utf-8") as file:
+            file.write(textwrap.fill(content, width=100))
+
+        print(f" Content saved to {filename}")
+
+    except sr.UnknownValueError:
+        print(" Could not recognize your voice.")
+    except Exception as e:
+        print(f" Error: {e}")
